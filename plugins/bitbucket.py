@@ -16,36 +16,23 @@ from __future__ import unicode_literals
 
 import argparse
 import re
-import json
-import base64
-from rtmbot.core import Plugin
-
-from kafka import KafkaProducer
+from .devops_core import DevopsPlugin
 
 
-producer = KafkaProducer(bootstrap_servers=['localhost:9092'],
-                                     value_serializer=lambda v: json.dumps(v).encode('utf-8'))
-
-
-
-class BitbucketPlugin(Plugin):
+class BitbucketPlugin(DevopsPlugin):
     """Plugin to act as a git command line interface"""
+
+    plugin_name = 'bitbucket'
 
     def adduser(self, data, namespace):
         if namespace.user and namespace.email and namespace.desc:
-            dict={'user':namespace.user,'email':namespace.email,'description':namespace.desc}
-
-            print(dict)
-            for key,value in dict.items():
-
-                encoded_key = key.encode('UTF-8', 'strict')
-                encoded_value=value.encode('UTF-8','strict')
-                print(encoded_key)
-                print(encoded_value)
-                producer.send('add_user_topic', key=encoded_key,value=encoded_value)
+            arguments = {'user': namespace.user,
+                         'email': namespace.email,
+                         'description': namespace.desc,
+                         'channel': data['channel']}
+            self.ingest(b'git-adduser', arguments)
             return True
         else:
-            print('in adduser else condition')
             msg = '[user & email & desc] options are necessary for this command'
             msg += '\r\n Usage:git <command> [options]'
             self.outputs.append([data['channel'], msg])
@@ -53,14 +40,9 @@ class BitbucketPlugin(Plugin):
 
     def addrepo(self, data, namespace):
         if namespace.project and namespace.repo:
-            dict = {'project': namespace.project, 'repo': namespace.repo, }
-
-            for key, value in dict.items():
-                encoded_key = key.encode('UTF-8', 'strict')
-                encoded_value = value.encode('UTF-8', 'strict')
-                print(encoded_key)
-                print(encoded_value)
-                producer.send('add_user_topic', key=encoded_key, value=encoded_value)
+            arguments = {'project': namespace.project, 'repo': namespace.repo,
+                         'channel': data['channel']}
+            self.ingest(b'git-addrepo', arguments)
             return True
         else:
             msg = '[project & repo] options are necessary for this command'
@@ -69,16 +51,10 @@ class BitbucketPlugin(Plugin):
             return False
 
     def addproject(self, data, namespace):
-        if namespace.project:
-
-            dict = {'project': namespace.project}
-
-            for key, value in dict.items():
-                encoded_key = key.encode('UTF-8', 'strict')
-                encoded_value = value.encode('UTF-8', 'strict')
-                print(encoded_key)
-                print(encoded_value)
-                producer.send('add_user_topic', key=encoded_key, value=encoded_value)
+        if namespace.project and namespace.desc:
+            arguments = {'project': namespace.project, 'description': namespace.desc,
+                         'channel': data['channel']}
+            self.ingest(b'git-addproject', arguments)
             return True
         else:
             msg = '[project] options are necessary for this command'
@@ -88,31 +64,19 @@ class BitbucketPlugin(Plugin):
 
     def addpermission(self, data, namespace):
         if namespace.user and namespace.permission:
-
-
             if namespace.repo and namespace.project:
                 #repo level permission
-                dict = {'user': namespace.user, 'permission': namespace.permission, 'repo': namespace.repo,
-                        'project': namespace.project}
-                for key, value in dict.items():
-                    encoded_key = key.encode('UTF-8', 'strict')
-                    encoded_value = value.encode('UTF-8', 'strict')
-                    print(encoded_key)
-                    print(encoded_value)
-                    producer.send('add_user_topic', key=encoded_key, value=encoded_value)
-
+                arguments = {'user': namespace.user, 'permission': namespace.permission,
+                             'repo': namespace.repo, 'project': namespace.project,
+                             'channel': data['channel']}
+                self.ingest(b'git-addpermission', arguments)
                 return True
+
             elif namespace.project:
                 # project level permission
-                dict = {'user': namespace.user, 'permission': namespace.permission, 'project': namespace.project}
-
-                for key, value in dict.items():
-                    encoded_key = key.encode('UTF-8', 'strict')
-                    encoded_value = value.encode('UTF-8', 'strict')
-                    print(encoded_key)
-                    print(encoded_value)
-                    producer.send('add_user_topic', key=encoded_key, value=encoded_value)
-
+                arguments = {'user': namespace.user, 'permission': namespace.permission,
+                             'project': namespace.project, 'channel': data['channel']}
+                self.ingest(b'git-addpermission', arguments)
                 return True
             else:
                 msg = '[project | project & repo] options are necessary for this command'
@@ -130,7 +94,6 @@ class BitbucketPlugin(Plugin):
         match = re.findall(r"!git\s*(.*)", text)
 
         if not match:
-
             return
 
         parser = argparse.ArgumentParser()
@@ -148,7 +111,7 @@ class BitbucketPlugin(Plugin):
             return __doc__
 
         command = ns.command[0]
-        if command not in ['adduser', 'addrepo', 'addproject', 'addpermission','help']:
+        if command not in ['adduser', 'addrepo', 'addproject', 'addpermission', 'help']:
             self.outputs.append([data['channel'], 'Usage:git <command> [options]'])
             return
         else:
