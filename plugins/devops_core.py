@@ -1,6 +1,7 @@
 import json
 from kafka import KafkaProducer
 from rtmbot.core import Plugin
+import datetime
 
 
 class DevopsPlugin(Plugin):
@@ -18,6 +19,7 @@ class DevopsPlugin(Plugin):
         return len(set(command) - set(cls.allowed_tokens)) == 0
 
     def ingest(self, key, value):
+        value['ts'] = datetime.datetime.now().strftime('%Y-%m-%d %H:%M:%s')
         producer = KafkaProducer(bootstrap_servers='localhost:9092',
                                  value_serializer=lambda v: json.dumps(v).encode('utf-8'))
         producer.send(self.topic, key=key, value=value)

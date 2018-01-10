@@ -11,6 +11,8 @@ class HelpPlugin(Plugin):
      regex2=r"Good Morning|Good Evening|Good Afternoon|GM"
      compiled_re1=re.compile(regex1,flags=re.I)
      res1=compiled_re1.search(text[0])
+     compiled_re2 = re.compile(regex2, flags=re.I)
+     res2 = compiled_re2.search(data['text'])
      if res1:
         if len(text)>1:
             compiled_re2=re.compile(regex2,flags=re.I)
@@ -25,12 +27,18 @@ class HelpPlugin(Plugin):
 
                     self.outputs.append([data['channel'],"Type help for command info" ])
         else:
-            compiled_re2 = re.compile(regex2, flags=re.I)
-            res2 = compiled_re2.search(data['text'])
-            if res2:
+            msg = data['text']
+            msg += '\r\n Type help for command info'
+            self.outputs.append([data['channel'], msg])
+
+
+     elif res2:
                     msg = data['text']
                     msg += '\r\n Type help for command info'
                     self.outputs.append([data['channel'], msg])
+
+
+
      elif(data['text']=='help'):
          message  ='Please type the following to get more details'
          message += '\r\n ```for detailed command list type !git help ``` \n ```for detailed command list type !svn help ``` \r ```for detailed command list type !kibana help` ```'
@@ -39,7 +47,7 @@ class HelpPlugin(Plugin):
 
          message = ' `git commands` '
          message += '\r\n ```!git adduser -u <user> -e <email> -d <description>``` '
-         message += '\r\n ```!git addrepo -r <repo> -p <project>``` '
+         message += '\r\n ```!git addrepo -r <repo> -p <project> -d <description>``` '
          message += '\r\n ```!git addproject -p <project>``` '
          message += '\r\n ```!git addpermission -u <user> -a <permission> -p <project> OR !git addpermission -u <user> -a <permission> -p <project> -r <repo>``` '
          self.outputs.append([data['channel'], message])
@@ -48,8 +56,8 @@ class HelpPlugin(Plugin):
          message = ' `svn commands` '
          message += '\r\n```!svn adduser -u <user> -e <email> -d <description>``` '
          message += '\r\n```!svn addrepo -r <repo> -p <project>```  '
-         message += '\r\n!```svn addproject -p <project>``` '
-         message += '\r\n!```svn addpermission -u <user> -a <permission> -p <project>``` '
+         message += '\r\n```!svn addproject -p <project>``` '
+         message += '\r\n```!svn addpermission -u <user> -a <permission> -p <project>``` '
          self.outputs.append([data['channel'], message])
 
      elif (data['text'] == '!kibana help'):

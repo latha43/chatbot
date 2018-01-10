@@ -40,6 +40,7 @@ class BitbucketPlugin(DevopsPlugin):
 
     def addrepo(self, data, namespace):
         if namespace.project and namespace.repo:
+
             arguments = {'project': namespace.project, 'repo': namespace.repo,
                          'channel': data['channel']}
             self.ingest(b'git-addrepo', arguments)
@@ -90,6 +91,11 @@ class BitbucketPlugin(DevopsPlugin):
             return False
 
     def process_message(self, data):
+
+        class MyAction(argparse.Action):
+            def __call__(self, parser, namespace, values, option_string=None):
+                setattr(namespace, self.dest, ' '.join(values))
+
         text = data['text']
         match = re.findall(r"!git\s*(.*)", text)
 
@@ -102,21 +108,25 @@ class BitbucketPlugin(DevopsPlugin):
         parser.add_argument('-p', '--project', required=False)
         parser.add_argument('-a', '--permission', required=False)
         parser.add_argument('-e', '--email', required=False)
-        parser.add_argument('-d', '--desc', required=False)
+        parser.add_argument('-d', '--desc', required=False,nargs='+',action=MyAction)
         parser.add_argument('command', nargs=1)
 
         try:
             ns = parser.parse_args(match[0].split(' '))
+
         except SystemExit:
+            self.outputs.append([data['channel'], 'invalid format!! please try `help`'])
             return __doc__
 
         command = ns.command[0]
-        if command not in ['adduser', 'addrepo', 'addproject', 'addpermission', 'help']:
+
+        if command not in ['adduser', 'addrepo', 'addproject', 'addpermission', 'help'] :
             self.outputs.append([data['channel'], 'Usage:git <command> [options]'])
             return
         else:
             try:
-                done = getattr(self, command)(data, ns)
+
+                done = getattr(self, command)(data,ns)
                 if done:
                     reply = 'Thank You!'
                     reply += '\r\nYour command is being executed.\r\n'
